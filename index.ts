@@ -54,7 +54,9 @@ class SplashLevel extends Phaser.Scene {
     });
 
     /* START PRELOAD ITEMS */
-    this.load.baseURL('https://neoalchemy.github.io/combat')
+    this.load.baseURL = 'https://neoalchemy.github.io/combat-dtz5w8/';
+    this.load.image('blueTank', 'static/assets/blueTank.png');
+    this.load.image('redTank', 'static/assets/redTank.png');
     /* END PRELOAD ITEMS */
   }
   private logo: Phaser.GameObjects.Image;
@@ -84,7 +86,7 @@ class SplashLevel extends Phaser.Scene {
     });
 
     setTimeout(() => {
-      //this.scene.start('MainLevel');
+      this.scene.start('MainLevel');
     }, 2000);
   }
 
@@ -100,7 +102,10 @@ class MainLevel extends Phaser.Scene {
 
   preload() {}
 
-  create() {}
+  create() {
+    this.add.image(50, 200, 'blueTank');
+    this.add.image(350, 200, 'redTank');
+  }
 
   update() {}
 }
