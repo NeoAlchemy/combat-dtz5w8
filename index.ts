@@ -99,7 +99,7 @@ class SplashLevel extends Phaser.Scene {
 class LaserGroup extends Phaser.Physics.Arcade.Group {
   // https://www.codecaptain.io/blog/game-development/shooting-bullets-phaser-3-using-arcade-physics-groups/696
 
-  constructor(scene) {
+  constructor(scene, key) {
     // Call the super constructor, passing in a world and a scene
     super(scene.physics.world, scene);
 
@@ -109,40 +109,62 @@ class LaserGroup extends Phaser.Physics.Arcade.Group {
       frameQuantity: 30, // Create 30 instances in the pool
       active: false,
       visible: false,
-      key: 'laser',
+      key: key,
     });
   }
 
-  fireLaser(x, y) {
+  fireLaser(x, y, angle) {
     // Get the first available sprite in the group
     const laser = this.getFirstDead(false);
     if (laser) {
-      laser.fire(x, y);
+      laser.fire(x, y, angle);
     }
   }
 }
 
 class Laser extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y) {
-    super(scene, x, y, 'laser');
+  constructor(scene, x, y, key) {
+    super(scene, x, y, key);
   }
+
+  private distance: number = 0;
+  private dx: number;
+  private dy: number;
+  private timerId: number;
 
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
+    const LASER_ALLOWED_DISTANCE = 150;
 
-    if (this.y <= 0) {
+    if (this.distance > LASER_ALLOWED_DISTANCE) {
       this.setActive(false);
       this.setVisible(false);
+      clearInterval(this.timerId);
+      this.distance = 0;
     }
   }
 
-  fire(x, y) {
+  fire(x, y, angle) {
+    const LASER_SPEED = 100;
+
     this.body.reset(x, y);
+    let rads = angle * (Math.PI / 180);
+    this.dx = LASER_SPEED * Math.cos(rads);
+    this.dy = LASER_SPEED * Math.sin(rads);
+    let initial_x = this.x;
+    let initial_y = this.y;
+    clearInterval(this.timerId);
+    this.timerId = setInterval(() => {
+      this.x = this.x + this.dx;
+      this.y = this.y + this.dy;
+      let diff_x = this.x - initial_x;
+      let diff_y = this.y - initial_y;
+      this.distance = Math.sqrt(diff_x * diff_x + diff_y * diff_y);
+      console.log('distance: ' + this.distance);
+    }, LASER_SPEED);
 
     this.setActive(true);
     this.setVisible(true);
-
-    this.setVelocityY(-900);
   }
 }
 
@@ -163,11 +185,14 @@ class MainLevel extends Phaser.Scene {
     const blueTank = this.physics.add.sprite(50, 200, 'blueTank');
     this.blueTank = blueTank;
 
+    const blueLaserMag = new LaserGroup(this, 'blueLaser');
+    this.blueLaserMag = blueLaserMag;
+
     const redTank = this.physics.add.sprite(350, 200, 'redTank');
     this.redTank = redTank;
 
-    const blueLaserMag = new LaserGroup(this);
-    this.blueLaserMag = blueLaserMag;
+    const redLaserMag = new LaserGroup(this, 'blueLaser');
+    this.redLaserMag = redLaserMag;
 
     // keys
     const cursorKeys = this.input.keyboard.createCursorKeys();
@@ -178,6 +203,7 @@ class MainLevel extends Phaser.Scene {
       left: 'A',
       down: 'S',
       right: 'D',
+      shoot: 'CAPS_LOCK',
     });
     this.wasdKeys = wasdKeys;
   }
@@ -187,6 +213,7 @@ class MainLevel extends Phaser.Scene {
   private redTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private blueTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private blueLaserMag: LaserGroup;
+  private redLaserMag: LaserGroup;
 
   update() {
     const TANK_SPEED = 1;
@@ -207,8 +234,12 @@ class MainLevel extends Phaser.Scene {
     if (this.cursorKeys.right.isDown) {
       this.redTank.angle += 5;
     }
-    if (this.cursorKeys.shift.isDown) {
-      this.blueLaserMag.fireLaser(this.redTank.x, this.redTank.y);
+    if (this.cursorKeys.space.isDown) {
+      this.redLaserMag.fireLaser(
+        this.redTank.x,
+        this.redTank.y,
+        this.redTank.angle
+      );
     }
 
     if (this.wasdKeys.up.isDown) {
@@ -226,6 +257,13 @@ class MainLevel extends Phaser.Scene {
     }
     if (this.wasdKeys.right.isDown) {
       this.blueTank.angle += 5;
+    }
+    if (this.wasdKeys.shoot.isDown) {
+      this.blueLaserMag.fireLaser(
+        this.blueTank.x,
+        this.blueTank.y,
+        this.blueTank.angle
+      );
     }
   }
 }
