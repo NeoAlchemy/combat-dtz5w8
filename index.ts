@@ -57,7 +57,7 @@ class SplashLevel extends Phaser.Scene {
     this.load.baseURL = 'https://neoalchemy.github.io/combat-dtz5w8/';
     this.load.image('blueTank', 'static/assets/blueTank.png');
     this.load.image('blueLaser', '/static/assets/blueTankLaser.png');
-    this.load.image('redTank', 'static/assets/redTank.png');
+    this.load.image('redTank', 'static/assets/redTank-v2.png');
     this.load.image('redLaser', '/static/assets/redTankLaser.png');
     /* END PRELOAD ITEMS */
   }
