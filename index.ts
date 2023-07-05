@@ -56,6 +56,7 @@ class SplashLevel extends Phaser.Scene {
     /* START PRELOAD ITEMS */
     this.load.baseURL = 'https://neoalchemy.github.io/combat-dtz5w8/';
     this.load.image('blueTank', 'static/assets/blueTank.png');
+    this.load.image('blueLaser', '/static/assets/blueTankLaser.png');
     this.load.image('redTank', 'static/assets/redTank.png');
     /* END PRELOAD ITEMS */
   }
@@ -95,6 +96,56 @@ class SplashLevel extends Phaser.Scene {
 
 /* ----------------------------------- MAIN SCENE --------------------------------- */
 
+class LaserGroup extends Phaser.Physics.Arcade.Group {
+  // https://www.codecaptain.io/blog/game-development/shooting-bullets-phaser-3-using-arcade-physics-groups/696
+
+  constructor(scene) {
+    // Call the super constructor, passing in a world and a scene
+    super(scene.physics.world, scene);
+
+    // Initialize the group
+    this.createMultiple({
+      classType: Laser, // This is the class we create just below
+      frameQuantity: 30, // Create 30 instances in the pool
+      active: false,
+      visible: false,
+      key: 'laser',
+    });
+  }
+
+  fireLaser(x, y) {
+    // Get the first available sprite in the group
+    const laser = this.getFirstDead(false);
+    if (laser) {
+      laser.fire(x, y);
+    }
+  }
+}
+
+class Laser extends Phaser.Physics.Arcade.Sprite {
+  constructor(scene, x, y) {
+    super(scene, x, y, 'laser');
+  }
+
+  preUpdate(time, delta) {
+    super.preUpdate(time, delta);
+
+    if (this.y <= 0) {
+      this.setActive(false);
+      this.setVisible(false);
+    }
+  }
+
+  fire(x, y) {
+    this.body.reset(x, y);
+
+    this.setActive(true);
+    this.setVisible(true);
+
+    this.setVelocityY(-900);
+  }
+}
+
 class MainLevel extends Phaser.Scene {
   constructor() {
     super({ key: 'MainLevel' });
@@ -103,11 +154,80 @@ class MainLevel extends Phaser.Scene {
   preload() {}
 
   create() {
-    this.add.image(50, 200, 'blueTank');
-    this.add.image(350, 200, 'redTank');
+    // setup arena
+    const border = this.add.rectangle(200, 200, 400, 400, 0x000000, 0xff);
+    border.setStrokeStyle(10, 0xf39f54);
+    this.cameras.main.setBackgroundColor('#B2BF50');
+
+    // sprites
+    const blueTank = this.physics.add.sprite(50, 200, 'blueTank');
+    this.blueTank = blueTank;
+
+    const redTank = this.physics.add.sprite(350, 200, 'redTank');
+    this.redTank = redTank;
+
+    const blueLaserMag = new LaserGroup(this);
+    this.blueLaserMag = blueLaserMag;
+
+    // keys
+    const cursorKeys = this.input.keyboard.createCursorKeys();
+    this.cursorKeys = cursorKeys;
+
+    const wasdKeys = this.input.keyboard.addKeys({
+      up: 'W',
+      left: 'A',
+      down: 'S',
+      right: 'D',
+    });
+    this.wasdKeys = wasdKeys;
   }
 
-  update() {}
+  private cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
+  private wasdKeys: any;
+  private redTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private blueTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private blueLaserMag: LaserGroup;
+
+  update() {
+    const TANK_SPEED = 1;
+
+    if (this.cursorKeys.up.isDown) {
+      var angleRad = this.redTank.angle * (Math.PI / 180);
+      this.redTank.x = this.redTank.x - TANK_SPEED * Math.cos(angleRad);
+      this.redTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
+    }
+    if (this.cursorKeys.down.isDown) {
+      var angleRad = this.redTank.angle * (Math.PI / 180);
+      this.redTank.x = this.redTank.x + TANK_SPEED * Math.cos(angleRad);
+      this.redTank.y = this.redTank.y + TANK_SPEED * Math.sin(angleRad);
+    }
+    if (this.cursorKeys.left.isDown) {
+      this.redTank.angle -= 5;
+    }
+    if (this.cursorKeys.right.isDown) {
+      this.redTank.angle += 5;
+    }
+    if (this.cursorKeys.shift.isDown) {
+      this.blueLaserMag.fireLaser(this.redTank.x, this.redTank.y);
+    }
+
+    if (this.wasdKeys.up.isDown) {
+      var angleRad = this.blueTank.angle * (Math.PI / 180);
+      this.blueTank.x = this.blueTank.x + TANK_SPEED * Math.cos(angleRad);
+      this.blueTank.y = this.blueTank.y + TANK_SPEED * Math.sin(angleRad);
+    }
+    if (this.wasdKeys.down.isDown) {
+      var angleRad = this.blueTank.angle * (Math.PI / 180);
+      this.blueTank.x = this.blueTank.x - TANK_SPEED * Math.cos(angleRad);
+      this.blueTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
+    }
+    if (this.wasdKeys.left.isDown) {
+      this.blueTank.angle -= 5;
+    }
+    if (this.wasdKeys.right.isDown) {
+      this.blueTank.angle += 5;
+    }
+  }
 }
 
 /* -------------------------------------------------------------------------- */
