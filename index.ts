@@ -115,7 +115,6 @@ class LaserGroup extends Phaser.Physics.Arcade.Group {
   }
 
   fireLaser(x, y, angle) {
-    console.log('fire');
     // Get the first available sprite in the group
     const laser = this.getFirstDead(false);
     if (laser) {
@@ -143,6 +142,7 @@ class Laser extends Phaser.Physics.Arcade.Sprite {
       this.setVisible(false);
       clearInterval(this.timerId);
       this.distance = 0;
+      this.body.reset(-10, -10);
     }
   }
 
@@ -223,13 +223,13 @@ class MainLevel extends Phaser.Scene {
 
     if (this.cursorKeys.up.isDown) {
       var angleRad = this.redTank.angle * (Math.PI / 180);
-      this.redTank.x = this.redTank.x - TANK_SPEED * Math.cos(angleRad);
-      this.redTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
+      this.redTank.x = this.redTank.x + TANK_SPEED * Math.cos(angleRad);
+      this.redTank.y = this.redTank.y + TANK_SPEED * Math.sin(angleRad);
     }
     if (this.cursorKeys.down.isDown) {
       var angleRad = this.redTank.angle * (Math.PI / 180);
-      this.redTank.x = this.redTank.x + TANK_SPEED * Math.cos(angleRad);
-      this.redTank.y = this.redTank.y + TANK_SPEED * Math.sin(angleRad);
+      this.redTank.x = this.redTank.x - TANK_SPEED * Math.cos(angleRad);
+      this.redTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
     }
     if (this.cursorKeys.left.isDown) {
       this.redTank.angle -= 5;
@@ -254,13 +254,13 @@ class MainLevel extends Phaser.Scene {
     if (this.wasdKeys.down.isDown) {
       var angleRad = this.blueTank.angle * (Math.PI / 180);
       this.blueTank.x = this.blueTank.x - TANK_SPEED * Math.cos(angleRad);
-      this.blueTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
+      this.blueTank.y = this.blueTank.y - TANK_SPEED * Math.sin(angleRad);
     }
     if (this.wasdKeys.left.isDown) {
-      this.blueTank.angle -= 5;
+      this.blueTank.angle += 5;
     }
     if (this.wasdKeys.right.isDown) {
-      this.blueTank.angle += 5;
+      this.blueTank.angle -= 5;
     }
     if (this.cursorKeys.shift.isDown) {
       this.blueLaserMag.fireLaser(
@@ -270,6 +270,50 @@ class MainLevel extends Phaser.Scene {
       );
       this.cursorKeys.shift.reset();
     }
+
+    this.physics.collide(
+      this.redLaserMag,
+      this.blueTank,
+      this.blueTankHit,
+      null,
+      this
+    );
+
+    this.physics.collide(
+      this.blueLaserMag,
+      this.redTank,
+      this.redTankHit,
+      null,
+      this
+    );
+  }
+
+  blueTankHit() {
+    const MOVE_BACK = 20;
+    this.tweens.add({
+      targets: this.blueTank, //your image that must spin
+      rotation: 4 * Math.PI, //rotation value must be radian
+      ease: 'linear',
+      delay: 100,
+      duration: 600, //duration is in milliseconds
+    });
+    var angleRad = this.blueTank.angle * (Math.PI / 180);
+    this.blueTank.x = this.blueTank.x - MOVE_BACK * Math.cos(angleRad);
+    this.blueTank.y = this.blueTank.y - MOVE_BACK * Math.sin(angleRad);
+  }
+
+  redTankHit() {
+    const MOVE_BACK = 20;
+    this.tweens.add({
+      targets: this.redTank, //your image that must spin
+      rotation: 5 * Math.PI, //rotation value must be radian
+      ease: 'linear',
+      delay: 100,
+      duration: 600, //duration is in milliseconds
+    });
+    var angleRad = this.redTank.angle * (Math.PI / 180);
+    this.redTank.x = this.redTank.x - MOVE_BACK * Math.cos(angleRad);
+    this.redTank.y = this.redTank.y - MOVE_BACK * Math.sin(angleRad);
   }
 }
 
