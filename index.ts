@@ -59,6 +59,16 @@ class SplashLevel extends Phaser.Scene {
     this.load.image('blueLaser', '/static/assets/blueTankLaser.png');
     this.load.image('redTank', 'static/assets/redTank-v2.png');
     this.load.image('redLaser', '/static/assets/redTankLaser.png');
+    this.load.bitmapFont({
+      key: 'VT323Blue',
+      textureURL: 'static/assets/font/VT323Blue.png',
+      fontDataURL: 'static/assets/font/VT323Blue.xml',
+    });
+    this.load.bitmapFont({
+      key: 'VT323Red',
+      textureURL: 'static/assets/font/VT323Red.png',
+      fontDataURL: 'static/assets/font/VT323Red.xml',
+    });
     /* END PRELOAD ITEMS */
   }
   private logo: Phaser.GameObjects.Image;
@@ -148,14 +158,17 @@ class Laser extends Phaser.Physics.Arcade.Sprite {
 
   fire(x, y, angle) {
     const LASER_SPEED = 10;
-    this.setScale(2);
 
+    this.setScale(2);
+    this.setCollideWorldBounds(true);
     this.body.reset(x, y);
+
     let rads = angle * (Math.PI / 180);
     this.dx = LASER_SPEED * Math.cos(rads);
     this.dy = LASER_SPEED * Math.sin(rads);
     let initial_x = this.x;
     let initial_y = this.y;
+
     clearInterval(this.timerId);
     this.timerId = setInterval(() => {
       this.x = this.x + this.dx;
@@ -179,23 +192,46 @@ class MainLevel extends Phaser.Scene {
 
   create() {
     // setup arena
-    const border = this.add.rectangle(200, 200, 400, 400, 0x000000, 0xff);
-    border.setStrokeStyle(10, 0xf39f54);
+    const gameBorder = this.add.graphics();
+    gameBorder.lineStyle(10, 0xf39f54, 1);
+    gameBorder.strokeRect(5, 60, 390, 335);
+    this.gameBorder = gameBorder;
+    this.physics.add.existing(this.gameBorder);
+    this.physics.world.setBounds(5, 60, 390, 335);
+
     this.cameras.main.setBackgroundColor('#B2BF50');
 
     // sprites
     const blueTank = this.physics.add.sprite(50, 200, 'blueTank');
+    blueTank.setCollideWorldBounds(true);
     this.blueTank = blueTank;
 
     const blueLaserMag = new LaserGroup(this, 'blueLaser');
     this.blueLaserMag = blueLaserMag;
 
     const redTank = this.physics.add.sprite(350, 200, 'redTank');
+    redTank.setCollideWorldBounds(true);
     redTank.angle = 180;
     this.redTank = redTank;
 
     const redLaserMag = new LaserGroup(this, 'redLaser');
     this.redLaserMag = redLaserMag;
+
+    const redScoreText = this.add.bitmapText(
+      350,
+      5,
+      'VT323Red',
+      String(this.redScore),
+      50
+    );
+
+    const blueScoreText = this.add.bitmapText(
+      50,
+      5,
+      'VT323Blue',
+      String(this.blueScore),
+      50
+    );
 
     // keys
     const cursorKeys = this.input.keyboard.createCursorKeys();
@@ -217,6 +253,9 @@ class MainLevel extends Phaser.Scene {
   private blueTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private blueLaserMag: LaserGroup;
   private redLaserMag: LaserGroup;
+  private redScore: number = 0;
+  private blueScore: number = 0;
+  private gameBorder: Phaser.GameObjects.Graphics;
 
   update() {
     const TANK_SPEED = 1;
@@ -270,6 +309,8 @@ class MainLevel extends Phaser.Scene {
       );
       this.cursorKeys.shift.reset();
     }
+
+    // COLLISION CHECKS
 
     this.physics.collide(
       this.redLaserMag,
