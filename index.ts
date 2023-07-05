@@ -58,6 +58,7 @@ class SplashLevel extends Phaser.Scene {
     this.load.image('blueTank', 'static/assets/blueTank.png');
     this.load.image('blueLaser', '/static/assets/blueTankLaser.png');
     this.load.image('redTank', 'static/assets/redTank.png');
+    this.load.image('redLaser', '/static/assets/redTankLaser.png');
     /* END PRELOAD ITEMS */
   }
   private logo: Phaser.GameObjects.Image;
@@ -114,6 +115,7 @@ class LaserGroup extends Phaser.Physics.Arcade.Group {
   }
 
   fireLaser(x, y, angle) {
+    console.log('fire');
     // Get the first available sprite in the group
     const laser = this.getFirstDead(false);
     if (laser) {
@@ -145,7 +147,8 @@ class Laser extends Phaser.Physics.Arcade.Sprite {
   }
 
   fire(x, y, angle) {
-    const LASER_SPEED = 100;
+    const LASER_SPEED = 10;
+    this.setScale(2);
 
     this.body.reset(x, y);
     let rads = angle * (Math.PI / 180);
@@ -160,7 +163,6 @@ class Laser extends Phaser.Physics.Arcade.Sprite {
       let diff_x = this.x - initial_x;
       let diff_y = this.y - initial_y;
       this.distance = Math.sqrt(diff_x * diff_x + diff_y * diff_y);
-      console.log('distance: ' + this.distance);
     }, LASER_SPEED);
 
     this.setActive(true);
@@ -189,9 +191,10 @@ class MainLevel extends Phaser.Scene {
     this.blueLaserMag = blueLaserMag;
 
     const redTank = this.physics.add.sprite(350, 200, 'redTank');
+    redTank.angle = 180;
     this.redTank = redTank;
 
-    const redLaserMag = new LaserGroup(this, 'blueLaser');
+    const redLaserMag = new LaserGroup(this, 'redLaser');
     this.redLaserMag = redLaserMag;
 
     // keys
@@ -240,6 +243,7 @@ class MainLevel extends Phaser.Scene {
         this.redTank.y,
         this.redTank.angle
       );
+      this.cursorKeys.space.reset();
     }
 
     if (this.wasdKeys.up.isDown) {
@@ -258,12 +262,13 @@ class MainLevel extends Phaser.Scene {
     if (this.wasdKeys.right.isDown) {
       this.blueTank.angle += 5;
     }
-    if (this.wasdKeys.shoot.isDown) {
+    if (this.cursorKeys.shift.isDown) {
       this.blueLaserMag.fireLaser(
         this.blueTank.x,
         this.blueTank.y,
         this.blueTank.angle
       );
+      this.cursorKeys.shift.reset();
     }
   }
 }
