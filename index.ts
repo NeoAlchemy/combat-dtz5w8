@@ -35,7 +35,7 @@ class SplashLevel extends Phaser.Scene {
   }
 
   preload() {
-    const splashScreen = this.add.image(200, 200, 'splashscreen');
+    const splashScreen = this.add.image(200, 250, 'splashscreen');
 
     const logo = this.add.image(200, 100, 'logo');
     logo.setScale(0.3);
@@ -69,6 +69,16 @@ class SplashLevel extends Phaser.Scene {
       textureURL: 'static/assets/font/VT323Red.png',
       fontDataURL: 'static/assets/font/VT323Red.xml',
     });
+    this.load.plugin(
+      'rexvirtualjoystickplugin',
+      'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js',
+      true
+    );
+    this.load.plugin(
+      'rexbuttonplugin',
+      'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexbuttonplugin.min.js',
+      true
+    );
     /* END PRELOAD ITEMS */
   }
   private logo: Phaser.GameObjects.Image;
@@ -198,7 +208,6 @@ class MainLevel extends Phaser.Scene {
     this.gameBorder = gameBorder;
     this.physics.add.existing(this.gameBorder);
     this.physics.world.setBounds(5, 60, 390, 335);
-
     this.cameras.main.setBackgroundColor('#B2BF50');
 
     // sprites
@@ -233,6 +242,36 @@ class MainLevel extends Phaser.Scene {
       50
     );
 
+    // joystick
+    const turretJoyStick = this.plugins
+      .get('rexvirtualjoystickplugin')
+      .add(this, {
+        x: 50,
+        y: 450,
+        radius: 50,
+        base: this.add.circle(0, 0, 50, 0x888888),
+        thumb: this.add.circle(0, 0, 30, 0xcccccc),
+        dir: 'left&right',
+      });
+    this.turretJoystick = turretJoyStick;
+
+    const movementJoyStick = this.plugins
+      .get('rexvirtualjoystickplugin')
+      .add(this, {
+        x: 350,
+        y: 450,
+        radius: 50,
+        base: this.add.circle(0, 0, 50, 0x888888),
+        thumb: this.add.circle(0, 0, 30, 0xcccccc),
+        dir: 'up&down',
+      });
+    this.moveJoystick = movementJoyStick;
+
+    const button = this.plugins
+      .get('rexbuttonplugin')
+      .add(this.add.circle(200, 450, 50, 0x3300ff));
+    this.button = button;
+
     // keys
     const cursorKeys = this.input.keyboard.createCursorKeys();
     this.cursorKeys = cursorKeys;
@@ -249,6 +288,9 @@ class MainLevel extends Phaser.Scene {
 
   private cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys: any;
+  private turretJoystick: any;
+  private moveJoystick: any;
+  private button: any;
   private redTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private blueTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
   private blueLaserMag: LaserGroup;
@@ -260,20 +302,20 @@ class MainLevel extends Phaser.Scene {
   update() {
     const TANK_SPEED = 1;
 
-    if (this.cursorKeys.up.isDown) {
+    if (this.cursorKeys.up.isDown || this.moveJoystick.up) {
       var angleRad = this.redTank.angle * (Math.PI / 180);
       this.redTank.x = this.redTank.x + TANK_SPEED * Math.cos(angleRad);
       this.redTank.y = this.redTank.y + TANK_SPEED * Math.sin(angleRad);
     }
-    if (this.cursorKeys.down.isDown) {
+    if (this.cursorKeys.down.isDown || this.moveJoystick.down) {
       var angleRad = this.redTank.angle * (Math.PI / 180);
       this.redTank.x = this.redTank.x - TANK_SPEED * Math.cos(angleRad);
       this.redTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
     }
-    if (this.cursorKeys.left.isDown) {
+    if (this.cursorKeys.left.isDown || this.turretJoystick.left) {
       this.redTank.angle -= 5;
     }
-    if (this.cursorKeys.right.isDown) {
+    if (this.cursorKeys.right.isDown || this.turretJoystick.right) {
       this.redTank.angle += 5;
     }
     if (this.cursorKeys.space.isDown) {
@@ -284,6 +326,14 @@ class MainLevel extends Phaser.Scene {
       );
       this.cursorKeys.space.reset();
     }
+
+    this.button.on('click', (button, gameObject, pointer, event) => {
+      this.redLaserMag.fireLaser(
+        this.redTank.x,
+        this.redTank.y,
+        this.redTank.angle
+      );
+    });
 
     if (this.wasdKeys.up.isDown) {
       var angleRad = this.blueTank.angle * (Math.PI / 180);
@@ -365,8 +415,8 @@ class MainLevel extends Phaser.Scene {
 const config = {
   type: Phaser.AUTO,
   width: 400,
-  height: 400,
-  backgroundColor: '0x000',
+  height: 500,
+  backgroundColor: '0xF3D371',
   physics: {
     default: 'arcade',
     arcade: {
