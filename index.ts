@@ -462,7 +462,7 @@ class MainLevel extends Phaser.Scene {
     );
   }
 
-  blueTankHit() {
+  blueTankHit(tank, laser) {
     if (!this.blueTankHitCooldown) {
       this.blueTankHitCooldown = true;
       this.redScore++; //increase red score
@@ -479,13 +479,20 @@ class MainLevel extends Phaser.Scene {
       var angleRad = this.blueTank.angle * (Math.PI / 180);
       this.blueTank.x = this.blueTank.x - MOVE_BACK * Math.cos(angleRad);
       this.blueTank.y = this.blueTank.y - MOVE_BACK * Math.sin(angleRad);
+
+      laser.setActive(false);
+      laser.setVisible(false);
+      clearInterval(laser.timerId); // Stop the laser's movement
+      laser.distance = 0;
+      laser.body.reset(-10, -10); // Move it offscreen
+
       this.time.delayedCall(1000, () => {
         this.blueTankHitCooldown = false;
       });
     }
   }
 
-  redTankHit() {
+  redTankHit(tank, laser) {
     if (!this.redTankHitCooldown) {
       this.redTankHitCooldown = true;
 
@@ -503,6 +510,13 @@ class MainLevel extends Phaser.Scene {
       var angleRad = this.redTank.angle * (Math.PI / 180);
       this.redTank.x = this.redTank.x - MOVE_BACK * Math.cos(angleRad);
       this.redTank.y = this.redTank.y - MOVE_BACK * Math.sin(angleRad);
+
+      laser.setActive(false);
+      laser.setVisible(false);
+      clearInterval(laser.timerId); // Stop the laser's movement
+      laser.distance = 0;
+      laser.body.reset(-10, -10); // Move it offscreen
+
       this.time.delayedCall(1000, () => {
         this.redTankHitCooldown = false;
       });
@@ -545,7 +559,6 @@ const game = new Phaser.Game(config);
 
 /* BUGS
 - Can be fired back into a wall
-- bullets go through enemy
 - tank run over tank
 - collider vs collide
 - AI for blue tank when single person
