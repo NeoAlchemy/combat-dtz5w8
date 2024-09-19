@@ -337,17 +337,22 @@ class MainLevel extends Phaser.Scene {
   private walls: Array<Phaser.GameObjects.GameObject> = [];
 
   update() {
-    const TANK_SPEED = 1;
+    const TANK_SPEED = 50;
 
     if (this.cursorKeys.up.isDown || this.moveJoystick.up) {
-      var angleRad = this.redTank.angle * (Math.PI / 180);
-      this.redTank.x = this.redTank.x + TANK_SPEED * Math.cos(angleRad);
-      this.redTank.y = this.redTank.y + TANK_SPEED * Math.sin(angleRad);
-    }
-    if (this.cursorKeys.down.isDown || this.moveJoystick.down) {
-      var angleRad = this.redTank.angle * (Math.PI / 180);
-      this.redTank.x = this.redTank.x - TANK_SPEED * Math.cos(angleRad);
-      this.redTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
+      var angleRad = Phaser.Math.DegToRad(this.redTank.angle);
+      this.redTank.setVelocity(
+        TANK_SPEED * Math.cos(angleRad),
+        TANK_SPEED * Math.sin(angleRad)
+      );
+    } else if (this.cursorKeys.down.isDown || this.moveJoystick.down) {
+      var angleRad = Phaser.Math.DegToRad(this.redTank.angle);
+      this.redTank.setVelocity(
+        -TANK_SPEED * Math.cos(angleRad),
+        -TANK_SPEED * Math.sin(angleRad)
+      );
+    } else {
+      this.redTank.setVelocity(0, 0);
     }
     if (this.cursorKeys.left.isDown) {
       this.redTank.angle -= 5;
@@ -379,15 +384,21 @@ class MainLevel extends Phaser.Scene {
     });
 
     if (this.wasdKeys.up.isDown) {
-      var angleRad = this.blueTank.angle * (Math.PI / 180);
-      this.blueTank.x = this.blueTank.x + TANK_SPEED * Math.cos(angleRad);
-      this.blueTank.y = this.blueTank.y + TANK_SPEED * Math.sin(angleRad);
+      var angleRad = Phaser.Math.DegToRad(this.blueTank.angle);
+      this.blueTank.setVelocity(
+        TANK_SPEED * Math.cos(angleRad),
+        TANK_SPEED * Math.sin(angleRad)
+      );
+    } else if (this.wasdKeys.down.isDown) {
+      var angleRad = Phaser.Math.DegToRad(this.blueTank.angle);
+      this.blueTank.setVelocity(
+        -TANK_SPEED * Math.cos(angleRad),
+        -TANK_SPEED * Math.sin(angleRad)
+      );
+    } else {
+      this.blueTank.setVelocity(0, 0);
     }
-    if (this.wasdKeys.down.isDown) {
-      var angleRad = this.blueTank.angle * (Math.PI / 180);
-      this.blueTank.x = this.blueTank.x - TANK_SPEED * Math.cos(angleRad);
-      this.blueTank.y = this.blueTank.y - TANK_SPEED * Math.sin(angleRad);
-    }
+
     if (this.wasdKeys.left.isDown) {
       this.blueTank.angle += 5;
     }
@@ -501,17 +512,17 @@ class MainLevel extends Phaser.Scene {
     }
   }
 
-  laserHitWall(laser, wall) {
-    console.log('laser hit wall');
+  laserHitWall(wall, laser) {
     // Deactivate the laser and make it invisible
     laser.setActive(false);
     laser.setVisible(false);
     clearInterval(laser.timerId); // Stop the laser's movement
+    laser.distance = 0;
     laser.body.reset(-10, -10); // Move it offscreen
   }
 
   tankHitWall(tank, wall) {
-    console.log('tank hit wall');
+    tank.setVelocity(0, 0);
   }
 }
 
