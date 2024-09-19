@@ -338,6 +338,7 @@ class MainLevel extends Phaser.Scene {
 
   update() {
     const TANK_SPEED = 50;
+    const TURRET_SPEED = 100;
 
     if (this.cursorKeys.up.isDown || this.moveJoystick.up) {
       var angleRad = Phaser.Math.DegToRad(this.redTank.angle);
@@ -354,17 +355,12 @@ class MainLevel extends Phaser.Scene {
     } else {
       this.redTank.setVelocity(0, 0);
     }
-    if (this.cursorKeys.left.isDown) {
-      this.redTank.angle -= 5;
-    }
-    if (this.turretJoystick.left) {
-      this.redTank.angle -= 1;
-    }
-    if (this.cursorKeys.right.isDown) {
-      this.redTank.angle += 5;
-    }
-    if (this.turretJoystick.right) {
-      this.redTank.angle += 1;
+    if (this.cursorKeys.left.isDown || this.turretJoystick.left) {
+      this.redTank.setAngularVelocity(-TURRET_SPEED); // Rotate left
+    } else if (this.cursorKeys.right.isDown || this.turretJoystick.right) {
+      this.redTank.setAngularVelocity(TURRET_SPEED);
+    } else {
+      this.redTank.setAngularVelocity(0);
     }
     if (this.cursorKeys.space.isDown) {
       this.redLaserMag.fireLaser(
@@ -400,10 +396,11 @@ class MainLevel extends Phaser.Scene {
     }
 
     if (this.wasdKeys.left.isDown) {
-      this.blueTank.angle += 5;
-    }
-    if (this.wasdKeys.right.isDown) {
-      this.blueTank.angle -= 5;
+      this.blueTank.setAngularVelocity(-TURRET_SPEED);
+    } else if (this.wasdKeys.right.isDown) {
+      this.blueTank.setAngularVelocity(TURRET_SPEED);
+    } else {
+      this.blueTank.setAngularVelocity(0);
     }
     if (this.cursorKeys.shift.isDown) {
       this.blueLaserMag.fireLaser(
@@ -545,3 +542,11 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+/* BUGS
+- Can be fired back into a wall
+- bullets go through enemy
+- tank run over tank
+- collider vs collide
+- AI for blue tank when single person
+*/
