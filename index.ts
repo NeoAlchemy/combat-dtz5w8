@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import Phaser, { Physics } from 'phaser';
 
 // Import stylesheets
 import './style.css';
@@ -116,6 +116,22 @@ class SplashLevel extends Phaser.Scene {
 }
 
 /* ----------------------------------- MAIN SCENE --------------------------------- */
+class Wall extends Phaser.GameObjects.Rectangle {
+  constructor(scene, x, y, width, height) {
+    super(scene, x, y, width, height, 0xf39f54);
+
+    // Add the rectangle to the scene
+    scene.add.existing(this);
+
+    // Add physics to the wall (make it a static body)
+    scene.physics.add.existing(this, true); // true makes it a static body
+
+    // Cast the body as a static physics body and set immovable properties
+    let body1 = this.body as Phaser.Physics.Arcade.StaticBody;
+    body1.immovable = true; // Ensure the wall doesn't move when hit
+    body1.onCollide = true;
+  }
+}
 
 class LaserGroup extends Phaser.Physics.Arcade.Group {
   // https://www.codecaptain.io/blog/game-development/shooting-bullets-phaser-3-using-arcade-physics-groups/696
@@ -211,14 +227,14 @@ class MainLevel extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#B2BF50');
 
     // sprites
-    const blueTank = this.physics.add.sprite(50, 200, 'blueTank');
+    const blueTank = this.physics.add.sprite(50, 225, 'blueTank');
     blueTank.setCollideWorldBounds(true);
     this.blueTank = blueTank;
 
     const blueLaserMag = new LaserGroup(this, 'blueLaser');
     this.blueLaserMag = blueLaserMag;
 
-    const redTank = this.physics.add.sprite(350, 200, 'redTank');
+    const redTank = this.physics.add.sprite(350, 225, 'redTank');
     redTank.setCollideWorldBounds(true);
     redTank.angle = 180;
     this.redTank = redTank;
@@ -233,6 +249,7 @@ class MainLevel extends Phaser.Scene {
       String(this.redScore),
       50
     );
+    this.redScoreText = redScoreText;
 
     const blueScoreText = this.add.bitmapText(
       50,
@@ -241,6 +258,21 @@ class MainLevel extends Phaser.Scene {
       String(this.blueScore),
       50
     );
+    this.blueScoreText = blueScoreText;
+
+    // walls
+    this.walls.push(new Wall(this, 100, 225, 10, 100));
+    this.walls.push(new Wall(this, 90, 180, 20, 10));
+    this.walls.push(new Wall(this, 90, 270, 20, 10));
+
+    this.walls.push(new Wall(this, 300, 225, 10, 100));
+    this.walls.push(new Wall(this, 310, 180, 20, 10));
+    this.walls.push(new Wall(this, 310, 270, 20, 10));
+
+    this.walls.push(new Wall(this, 200, 225, 30, 30));
+
+    this.walls.push(new Wall(this, 200, 150, 100, 10));
+    this.walls.push(new Wall(this, 200, 300, 100, 10));
 
     // joystick
     const turretJoyStick = this.plugins
@@ -298,6 +330,11 @@ class MainLevel extends Phaser.Scene {
   private redScore: number = 0;
   private blueScore: number = 0;
   private gameBorder: Phaser.GameObjects.Graphics;
+  private redScoreText: Phaser.GameObjects.BitmapText;
+  private blueScoreText: Phaser.GameObjects.BitmapText;
+  private blueTankHitCooldown: boolean;
+  private redTankHitCooldown: boolean;
+  private walls: Array<Phaser.GameObjects.GameObject> = [];
 
   update() {
     const TANK_SPEED = 1;
@@ -312,11 +349,17 @@ class MainLevel extends Phaser.Scene {
       this.redTank.x = this.redTank.x - TANK_SPEED * Math.cos(angleRad);
       this.redTank.y = this.redTank.y - TANK_SPEED * Math.sin(angleRad);
     }
-    if (this.cursorKeys.left.isDown || this.turretJoystick.left) {
+    if (this.cursorKeys.left.isDown) {
       this.redTank.angle -= 5;
     }
-    if (this.cursorKeys.right.isDown || this.turretJoystick.right) {
+    if (this.turretJoystick.left) {
+      this.redTank.angle -= 1;
+    }
+    if (this.cursorKeys.right.isDown) {
       this.redTank.angle += 5;
+    }
+    if (this.turretJoystick.right) {
+      this.redTank.angle += 1;
     }
     if (this.cursorKeys.space.isDown) {
       this.redLaserMag.fireLaser(
@@ -377,34 +420,98 @@ class MainLevel extends Phaser.Scene {
       null,
       this
     );
+
+    this.physics.collide(
+      this.blueLaserMag,
+      this.walls,
+      this.laserHitWall,
+      null,
+      this
+    );
+
+    this.physics.collide(
+      this.redLaserMag,
+      this.walls,
+      this.laserHitWall,
+      null,
+      this
+    );
+
+    this.physics.collide(
+      this.blueTank,
+      this.walls,
+      this.tankHitWall,
+      null,
+      this
+    );
+
+    this.physics.collide(
+      this.redTank,
+      this.walls,
+      this.tankHitWall,
+      null,
+      this
+    );
   }
 
   blueTankHit() {
-    const MOVE_BACK = 20;
-    this.tweens.add({
-      targets: this.blueTank, //your image that must spin
-      rotation: 4 * Math.PI, //rotation value must be radian
-      ease: 'linear',
-      delay: 100,
-      duration: 600, //duration is in milliseconds
-    });
-    var angleRad = this.blueTank.angle * (Math.PI / 180);
-    this.blueTank.x = this.blueTank.x - MOVE_BACK * Math.cos(angleRad);
-    this.blueTank.y = this.blueTank.y - MOVE_BACK * Math.sin(angleRad);
+    if (!this.blueTankHitCooldown) {
+      this.blueTankHitCooldown = true;
+      this.redScore++; //increase red score
+      this.redScoreText.setText(String(this.redScore)); //increase blue's scores
+
+      const MOVE_BACK = 20;
+      this.tweens.add({
+        targets: this.blueTank, //your image that must spin
+        rotation: 4 * Math.PI, //rotation value must be radian
+        ease: 'linear',
+        delay: 100,
+        duration: 600, //duration is in milliseconds
+      });
+      var angleRad = this.blueTank.angle * (Math.PI / 180);
+      this.blueTank.x = this.blueTank.x - MOVE_BACK * Math.cos(angleRad);
+      this.blueTank.y = this.blueTank.y - MOVE_BACK * Math.sin(angleRad);
+      this.time.delayedCall(1000, () => {
+        this.blueTankHitCooldown = false;
+      });
+    }
   }
 
   redTankHit() {
-    const MOVE_BACK = 20;
-    this.tweens.add({
-      targets: this.redTank, //your image that must spin
-      rotation: 5 * Math.PI, //rotation value must be radian
-      ease: 'linear',
-      delay: 100,
-      duration: 600, //duration is in milliseconds
-    });
-    var angleRad = this.redTank.angle * (Math.PI / 180);
-    this.redTank.x = this.redTank.x - MOVE_BACK * Math.cos(angleRad);
-    this.redTank.y = this.redTank.y - MOVE_BACK * Math.sin(angleRad);
+    if (!this.redTankHitCooldown) {
+      this.redTankHitCooldown = true;
+
+      this.blueScore++;
+      this.blueScoreText.setText(String(this.blueScore)); //increase blue's scores
+
+      const MOVE_BACK = 20;
+      this.tweens.add({
+        targets: this.redTank, //your image that must spin
+        rotation: 5 * Math.PI, //rotation value must be radian
+        ease: 'linear',
+        delay: 100,
+        duration: 600, //duration is in milliseconds
+      });
+      var angleRad = this.redTank.angle * (Math.PI / 180);
+      this.redTank.x = this.redTank.x - MOVE_BACK * Math.cos(angleRad);
+      this.redTank.y = this.redTank.y - MOVE_BACK * Math.sin(angleRad);
+      this.time.delayedCall(1000, () => {
+        this.redTankHitCooldown = false;
+      });
+    }
+  }
+
+  laserHitWall(laser, wall) {
+    console.log('laser hit wall');
+    // Deactivate the laser and make it invisible
+    laser.setActive(false);
+    laser.setVisible(false);
+    clearInterval(laser.timerId); // Stop the laser's movement
+    laser.body.reset(-10, -10); // Move it offscreen
+  }
+
+  tankHitWall(tank, wall) {
+    console.log('tank hit wall');
   }
 }
 
