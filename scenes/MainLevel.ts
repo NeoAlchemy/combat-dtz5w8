@@ -190,7 +190,11 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
       } else if (!this._createRay(this.angle + 45)) {
         this._turnRight(); // Turn right if no obstacle on the right
       } else {
-        this._turnLeft(); // Default to turning left
+        if (Phaser.Math.Between(0, 1)) {
+          this._turnLeft(); // Default to turning left
+        } else {
+          this._turnRight();
+        }
       }
 
       // Apply cooldown to avoid constant turning, gives time to turn before collission
