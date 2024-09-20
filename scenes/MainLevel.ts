@@ -133,7 +133,7 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
 
   _enemyInFieldOfVision(enemy) {
     const detectionRadius = 200; // Set the radius of detection
-    const fieldOfViewAngle = 60; // Set the field of view angle in degrees
+    const fieldOfViewAngle = 360; // Set the field of view angle in degrees
 
     // Calculate distance and angle to the enemy
     const distanceToEnemy = Phaser.Math.Distance.Between(
@@ -171,11 +171,12 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
   }
 
   _createRay(angle) {
-    return this.raycaster.rayToward(
+    let ray = this.raycaster.rayToward(
       this.x,
       this.y,
       Phaser.Math.DegToRad(angle)
     );
+    return ray;
   }
 
   update(enemy) {
@@ -191,7 +192,7 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
         this._turnRight(); // Turn right if no obstacle on the right
       } else {
         if (Phaser.Math.Between(0, 1)) {
-          this._turnLeft(); // Default to turning left
+          this._turnLeft();
         } else {
           this._turnRight();
         }
@@ -205,8 +206,16 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
       });
     } else if (!this.cooldown) {
       if (this._enemyInFieldOfVision(enemy)) {
-        this._moveTowardEnemy(enemy);
-        this._fire();
+        // Check if obstacle between view
+        let rayToEnemy = this._createRay(
+          Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y)
+        );
+        if (rayToEnemy && rayToEnemy.hit) {
+          this._moveTowardEnemy(enemy);
+          this._fire();
+        } else {
+          this._moveForward();
+        }
       } else {
         this._moveForward();
       }
