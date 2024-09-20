@@ -392,7 +392,7 @@ export class MainLevel extends Phaser.Scene {
       'rexvirtualjoystickplugin'
     );
     const turretJoyStick = rexVirtualJoyStickPlugin.add(this, {
-      x: 50,
+      x: 350,
       y: 450,
       radius: 50,
       base: this.add.circle(0, 0, 50, 0x888888),
@@ -402,7 +402,7 @@ export class MainLevel extends Phaser.Scene {
     this.turretJoystick = turretJoyStick;
 
     const movementJoyStick = rexVirtualJoyStickPlugin.add(this, {
-      x: 350,
+      x: 50,
       y: 450,
       radius: 50,
       base: this.add.circle(0, 0, 50, 0x888888),
