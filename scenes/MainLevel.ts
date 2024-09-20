@@ -2,8 +2,8 @@ import Phaser from 'phaser';
 
 class AITank extends Phaser.Physics.Arcade.Sprite {
   private TANK_SPEED: number = 50;
-  private TURRET_SPEED: number = 50;
-  private MAX_RAY_LENGTH: any = 35;
+  private TURRET_SPEED: number = 150;
+  private MAX_RAY_LENGTH: any = 50;
   private cooldown: boolean;
   private raycaster: any;
 
@@ -20,6 +20,55 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
     });
     this.raycaster = raycaster;
     this.raycaster.addObstacle(walls);
+    this.raycaster.addObstacle(this._createGameBorderObstacle());
+  }
+
+  _createGameBorderObstacle() {
+    // Get the coordinates and size of the game border (strokeRect is used)
+    const lineWidth = 10; // Line width defined by lineStyle
+    const strokeOffset = lineWidth / 2; // Half the line width extends outside the rectangle
+
+    const borderX = 5; // x coordinate of the top-left corner
+    const borderY = 60; // y coordinate of the top-left corner
+    const borderWidth = 390; // width of the border
+    const borderHeight = 335; // height of the border
+
+    // Adjust the dimensions based on the stroke offset for each side
+    const outerX = borderX - strokeOffset;
+    const outerY = borderY - strokeOffset;
+    const outerWidth = borderWidth + lineWidth;
+    const outerHeight = borderHeight + lineWidth;
+
+    // Helper to create a polygon from points
+    const createPolygon = (points) => new Phaser.Geom.Polygon(points);
+
+    // Define the four polygons for the top, bottom, left, and right borders
+    return [
+      createPolygon([
+        { x: outerX, y: outerY }, // Top-left outer
+        { x: outerX + outerWidth, y: outerY }, // Top-right outer
+        { x: borderX + borderWidth, y: borderY }, // Top-right inner
+        { x: borderX, y: borderY }, // Top-left inner
+      ]),
+      createPolygon([
+        { x: outerX, y: borderY + borderHeight }, // Bottom-left inner
+        { x: outerX + outerWidth, y: borderY + borderHeight }, // Bottom-right inner
+        { x: outerX + outerWidth, y: outerY + outerHeight }, // Bottom-right outer
+        { x: outerX, y: outerY + outerHeight }, // Bottom-left outer
+      ]),
+      createPolygon([
+        { x: outerX, y: outerY }, // Top-left outer
+        { x: borderX, y: borderY }, // Top-left inner
+        { x: borderX, y: borderY + borderHeight }, // Bottom-left inner
+        { x: outerX, y: outerY + outerHeight }, // Bottom-left outer
+      ]),
+      createPolygon([
+        { x: borderX + borderWidth, y: borderY }, // Top-right inner
+        { x: outerX + outerWidth, y: outerY }, // Top-right outer
+        { x: outerX + outerWidth, y: outerY + outerHeight }, // Bottom-right outer
+        { x: borderX + borderWidth, y: borderY + borderHeight }, // Bottom-right inner
+      ]),
+    ];
   }
 
   _moveForward() {
@@ -50,27 +99,85 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
     this.setAngularVelocity(this.TURRET_SPEED); // Rotate left
   }
 
-  update() {
-    if (!this.cooldown) {
-      this.cooldown = true;
-      let result = this.raycaster.rayToward(
-        this.x,
-        this.y,
-        Phaser.Math.DegToRad(this.angle)
-      );
-      if (result && result.hit) {
-        this._turnLeft();
-        this._stop();
+  _stopTurning() {
+    this.setAngularVelocity(0);
+  }
+
+  // Method to calculate the angle to the enemy and rotate the tank toward it
+  _rotateTowardEnemy(enemy) {
+    // Calculate the angle between the tank and the enemy
+    const angleToEnemy = Phaser.Math.Angle.Between(
+      this.x,
+      this.y,
+      enemy.x,
+      enemy.y
+    );
+
+    // Convert the angle to degrees
+    const angleToEnemyDegrees = Phaser.Math.RadToDeg(angleToEnemy);
+
+    // Adjust the tank's angle to face the enemy
+    this.angle = angleToEnemyDegrees;
+  }
+
+  // Move towards the enemy
+  _moveTowardEnemy(enemy) {
+    // Rotate toward the enemy
+    this._rotateTowardEnemy(enemy);
+
+    this._moveForward();
+  }
+
+  _createRayToEnemy(enemy) {
+    // Create a ray from the tank towards the enemy
+    return this.raycaster.rayToward(
+      this.x,
+      this.y,
+      Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y)
+    );
+  }
+
+  _createRay(angle) {
+    return this.raycaster.rayToward(
+      this.x,
+      this.y,
+      Phaser.Math.DegToRad(angle - 45)
+    );
+  }
+
+  update(enemy) {
+    // Raycasting: Cast three rays (front, left, right) for obstacle detection
+    let frontRay = this._createRay(this.angle);
+    let leftRay = this._createRay(this.angle - 45);
+    let rightRay = this._createRay(this.angle + 45);
+    //let rayToEnemy = this._createRayToEnemy(enemy);
+
+    //this.scene.add.graphics().lineStyle(2, 0x840000).strokeLineShape(this.raycaster.ray);
+
+    // If there's an obstacle in front and no cooldown, initiate turning
+    if (frontRay && frontRay.hit && !this.cooldown) {
+      this._stop(); // Stop the tank
+      if (!leftRay) {
+        this._turnLeft(); // Turn left if no obstacle on the left
+      } else if (!rightRay) {
+        this._turnRight(); // Turn right if no obstacle on the right
       } else {
-        this._moveForward();
+        this._turnLeft(); // Default to turning left
       }
 
-      this.scene.time.delayedCall(1000, () => {
+      // Apply cooldown to avoid constant turning, gives time to turn before collission
+      this.cooldown = true;
+      this.scene.time.delayedCall(600, () => {
+        this._stopTurning();
         this.cooldown = false;
       });
+    } else if (!this.cooldown) {
+      //if (rayToEnemy && rayToEnemy.hit) {
+      //  this._moveTowardEnemy(enemy); // Move forward if no obstacles
+      //} else {
+      this._moveForward();
+      //}
     }
-
-    //this.scene.physics.accelerateTo(this);
   }
 }
 
@@ -198,13 +305,6 @@ export class MainLevel extends Phaser.Scene {
     this.walls.push(new Wall(this, 200, 150, 100, 10));
     this.walls.push(new Wall(this, 200, 300, 100, 10));
 
-    // sprites
-    const blueTank = new AITank(this, 50, 225, 'blueTank', this.walls);
-    this.blueTank = blueTank;
-
-    const blueLaserMag = new LaserGroup(this, 'blueLaser');
-    this.blueLaserMag = blueLaserMag;
-
     const redTank = this.physics.add.sprite(350, 225, 'redTank');
     redTank.setCollideWorldBounds(true);
     redTank.angle = 180;
@@ -212,6 +312,13 @@ export class MainLevel extends Phaser.Scene {
 
     const redLaserMag = new LaserGroup(this, 'redLaser');
     this.redLaserMag = redLaserMag;
+
+    // sprites
+    const blueTank = new AITank(this, 50, 225, 'blueTank', this.walls);
+    this.blueTank = blueTank;
+
+    const blueLaserMag = new LaserGroup(this, 'blueLaser');
+    this.blueLaserMag = blueLaserMag;
 
     const redScoreText = this.add.bitmapText(
       350,
@@ -325,7 +432,7 @@ export class MainLevel extends Phaser.Scene {
       );
     });
 
-    this.blueTank.update();
+    this.blueTank.update(this.redTank);
 
     // COLLISION CHECKS
 
