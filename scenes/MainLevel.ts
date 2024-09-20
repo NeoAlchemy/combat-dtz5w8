@@ -6,8 +6,9 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
   private MAX_RAY_LENGTH: any = 50;
   private cooldown: boolean;
   private raycaster: any;
+  private laserMag: any;
 
-  constructor(scene, x, y, texture, walls) {
+  constructor(scene, x, y, texture, walls, laserMag) {
     super(scene, x, y, texture);
 
     this.scene.add.existing(this);
@@ -21,6 +22,8 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
     this.raycaster = raycaster;
     this.raycaster.addObstacle(walls);
     this.raycaster.addObstacle(this._createGameBorderObstacle());
+
+    this.laserMag = laserMag;
   }
 
   _createGameBorderObstacle() {
@@ -128,38 +131,63 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
     this._moveForward();
   }
 
-  _createRayToEnemy(enemy) {
-    // Create a ray from the tank towards the enemy
-    return this.raycaster.rayToward(
+  _enemyInFieldOfVision(enemy) {
+    const detectionRadius = 200; // Set the radius of detection
+    const fieldOfViewAngle = 60; // Set the field of view angle in degrees
+
+    // Calculate distance and angle to the enemy
+    const distanceToEnemy = Phaser.Math.Distance.Between(
       this.x,
       this.y,
+      enemy.x,
+      enemy.y
+    );
+    const angleToEnemy = Phaser.Math.RadToDeg(
       Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y)
     );
+
+    // Check if the enemy is within the detection radius
+    if (distanceToEnemy <= detectionRadius) {
+      // Calculate the difference between the tank's current angle and the angle to the enemy
+      const angleDifference = Phaser.Math.Angle.WrapDegrees(
+        this.angle - angleToEnemy
+      );
+
+      // Check if the enemy is within the field of view
+      if (Math.abs(angleDifference) <= fieldOfViewAngle / 2) {
+        return true;
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+  }
+
+  _fire() {
+    this.scene.time.delayedCall(400, () => {
+      this.laserMag.fireLaser(this.x, this.y, this.angle);
+    });
   }
 
   _createRay(angle) {
     return this.raycaster.rayToward(
       this.x,
       this.y,
-      Phaser.Math.DegToRad(angle - 45)
+      Phaser.Math.DegToRad(angle)
     );
   }
 
   update(enemy) {
     // Raycasting: Cast three rays (front, left, right) for obstacle detection
     let frontRay = this._createRay(this.angle);
-    let leftRay = this._createRay(this.angle - 45);
-    let rightRay = this._createRay(this.angle + 45);
-    //let rayToEnemy = this._createRayToEnemy(enemy);
-
-    //this.scene.add.graphics().lineStyle(2, 0x840000).strokeLineShape(this.raycaster.ray);
 
     // If there's an obstacle in front and no cooldown, initiate turning
     if (frontRay && frontRay.hit && !this.cooldown) {
       this._stop(); // Stop the tank
-      if (!leftRay) {
+      if (!this._createRay(this.angle - 45)) {
         this._turnLeft(); // Turn left if no obstacle on the left
-      } else if (!rightRay) {
+      } else if (!this._createRay(this.angle + 45)) {
         this._turnRight(); // Turn right if no obstacle on the right
       } else {
         this._turnLeft(); // Default to turning left
@@ -172,11 +200,12 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
         this.cooldown = false;
       });
     } else if (!this.cooldown) {
-      //if (rayToEnemy && rayToEnemy.hit) {
-      //  this._moveTowardEnemy(enemy); // Move forward if no obstacles
-      //} else {
-      this._moveForward();
-      //}
+      if (this._enemyInFieldOfVision(enemy)) {
+        this._moveTowardEnemy(enemy);
+        this._fire();
+      } else {
+        this._moveForward();
+      }
     }
   }
 }
@@ -313,12 +342,19 @@ export class MainLevel extends Phaser.Scene {
     const redLaserMag = new LaserGroup(this, 'redLaser');
     this.redLaserMag = redLaserMag;
 
-    // sprites
-    const blueTank = new AITank(this, 50, 225, 'blueTank', this.walls);
-    this.blueTank = blueTank;
-
     const blueLaserMag = new LaserGroup(this, 'blueLaser');
     this.blueLaserMag = blueLaserMag;
+
+    // sprites
+    const blueTank = new AITank(
+      this,
+      50,
+      225,
+      'blueTank',
+      this.walls,
+      this.blueLaserMag
+    );
+    this.blueTank = blueTank;
 
     const redScoreText = this.add.bitmapText(
       350,
