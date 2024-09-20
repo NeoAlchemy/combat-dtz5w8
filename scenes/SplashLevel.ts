@@ -50,6 +50,12 @@ export class SplashLevel extends Phaser.Scene {
       'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexbuttonplugin.min.js',
       true
     );
+    this.load.plugin(
+      'rexraycasterplugin',
+      'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexraycasterplugin.min.js',
+      true
+    );
+
     /* END PRELOAD ITEMS */
   }
   private logo: Phaser.GameObjects.Image;

@@ -1,5 +1,79 @@
 import Phaser from 'phaser';
 
+class AITank extends Phaser.Physics.Arcade.Sprite {
+  private TANK_SPEED: number = 50;
+  private TURRET_SPEED: number = 50;
+  private MAX_RAY_LENGTH: any = 35;
+  private cooldown: boolean;
+  private raycaster: any;
+
+  constructor(scene, x, y, texture, walls) {
+    super(scene, x, y, texture);
+
+    this.scene.add.existing(this);
+    this.scene.physics.add.existing(this);
+    this.setCollideWorldBounds(true);
+
+    const rexRaycasterPlugin = scene.plugins.get('rexraycasterplugin');
+    const raycaster = rexRaycasterPlugin.add({
+      maxRayLength: this.MAX_RAY_LENGTH,
+    });
+    this.raycaster = raycaster;
+    this.raycaster.addObstacle(walls);
+  }
+
+  _moveForward() {
+    var angleRad = Phaser.Math.DegToRad(this.angle);
+    this.setVelocity(
+      this.TANK_SPEED * Math.cos(angleRad),
+      this.TANK_SPEED * Math.sin(angleRad)
+    );
+  }
+
+  _moveBackwards() {
+    var angleRad = Phaser.Math.DegToRad(this.angle);
+    this.setVelocity(
+      -this.TANK_SPEED * Math.cos(angleRad),
+      -this.TANK_SPEED * Math.sin(angleRad)
+    );
+  }
+
+  _stop() {
+    this.setVelocity(0);
+  }
+
+  _turnLeft() {
+    this.setAngularVelocity(-this.TURRET_SPEED); // Rotate left
+  }
+
+  _turnRight() {
+    this.setAngularVelocity(this.TURRET_SPEED); // Rotate left
+  }
+
+  update() {
+    if (!this.cooldown) {
+      this.cooldown = true;
+      let result = this.raycaster.rayToward(
+        this.x,
+        this.y,
+        Phaser.Math.DegToRad(this.angle)
+      );
+      if (result && result.hit) {
+        this._turnLeft();
+        this._stop();
+      } else {
+        this._moveForward();
+      }
+
+      this.scene.time.delayedCall(1000, () => {
+        this.cooldown = false;
+      });
+    }
+
+    //this.scene.physics.accelerateTo(this);
+  }
+}
+
 class Wall extends Phaser.GameObjects.Rectangle {
   constructor(scene, x, y, width, height) {
     super(scene, x, y, width, height, 0xf39f54);
@@ -110,9 +184,22 @@ export class MainLevel extends Phaser.Scene {
     this.physics.world.setBounds(5, 60, 390, 335);
     this.cameras.main.setBackgroundColor('#B2BF50');
 
+    // walls
+    this.walls.push(new Wall(this, 100, 225, 10, 100));
+    this.walls.push(new Wall(this, 90, 180, 20, 10));
+    this.walls.push(new Wall(this, 90, 270, 20, 10));
+
+    this.walls.push(new Wall(this, 300, 225, 10, 100));
+    this.walls.push(new Wall(this, 310, 180, 20, 10));
+    this.walls.push(new Wall(this, 310, 270, 20, 10));
+
+    this.walls.push(new Wall(this, 200, 225, 30, 30));
+
+    this.walls.push(new Wall(this, 200, 150, 100, 10));
+    this.walls.push(new Wall(this, 200, 300, 100, 10));
+
     // sprites
-    const blueTank = this.physics.add.sprite(50, 225, 'blueTank');
-    blueTank.setCollideWorldBounds(true);
+    const blueTank = new AITank(this, 50, 225, 'blueTank', this.walls);
     this.blueTank = blueTank;
 
     const blueLaserMag = new LaserGroup(this, 'blueLaser');
@@ -143,20 +230,6 @@ export class MainLevel extends Phaser.Scene {
       50
     );
     this.blueScoreText = blueScoreText;
-
-    // walls
-    this.walls.push(new Wall(this, 100, 225, 10, 100));
-    this.walls.push(new Wall(this, 90, 180, 20, 10));
-    this.walls.push(new Wall(this, 90, 270, 20, 10));
-
-    this.walls.push(new Wall(this, 300, 225, 10, 100));
-    this.walls.push(new Wall(this, 310, 180, 20, 10));
-    this.walls.push(new Wall(this, 310, 270, 20, 10));
-
-    this.walls.push(new Wall(this, 200, 225, 30, 30));
-
-    this.walls.push(new Wall(this, 200, 150, 100, 10));
-    this.walls.push(new Wall(this, 200, 300, 100, 10));
 
     // joystick
     const rexVirtualJoyStickPlugin: any = this.plugins.get(
@@ -189,15 +262,6 @@ export class MainLevel extends Phaser.Scene {
     // keys
     const cursorKeys = this.input.keyboard.createCursorKeys();
     this.cursorKeys = cursorKeys;
-
-    const wasdKeys = this.input.keyboard.addKeys({
-      up: 'W',
-      left: 'A',
-      down: 'S',
-      right: 'D',
-      shoot: 'CAPS_LOCK',
-    });
-    this.wasdKeys = wasdKeys;
   }
 
   private cursorKeys: Phaser.Types.Input.Keyboard.CursorKeys;
@@ -206,7 +270,7 @@ export class MainLevel extends Phaser.Scene {
   private moveJoystick: any;
   private button: any;
   private redTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
-  private blueTank: Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+  private blueTank: AITank;
   private blueLaserMag: LaserGroup;
   private redLaserMag: LaserGroup;
   private redScore: number = 0;
@@ -261,37 +325,7 @@ export class MainLevel extends Phaser.Scene {
       );
     });
 
-    if (this.wasdKeys.up.isDown) {
-      var angleRad = Phaser.Math.DegToRad(this.blueTank.angle);
-      this.blueTank.setVelocity(
-        TANK_SPEED * Math.cos(angleRad),
-        TANK_SPEED * Math.sin(angleRad)
-      );
-    } else if (this.wasdKeys.down.isDown) {
-      var angleRad = Phaser.Math.DegToRad(this.blueTank.angle);
-      this.blueTank.setVelocity(
-        -TANK_SPEED * Math.cos(angleRad),
-        -TANK_SPEED * Math.sin(angleRad)
-      );
-    } else {
-      this.blueTank.setVelocity(0, 0);
-    }
-
-    if (this.wasdKeys.left.isDown) {
-      this.blueTank.setAngularVelocity(-TURRET_SPEED);
-    } else if (this.wasdKeys.right.isDown) {
-      this.blueTank.setAngularVelocity(TURRET_SPEED);
-    } else {
-      this.blueTank.setAngularVelocity(0);
-    }
-    if (this.cursorKeys.shift.isDown) {
-      this.blueLaserMag.fireLaser(
-        this.blueTank.x,
-        this.blueTank.y,
-        this.blueTank.angle
-      );
-      this.cursorKeys.shift.reset();
-    }
+    this.blueTank.update();
 
     // COLLISION CHECKS
 

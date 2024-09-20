@@ -1,4 +1,4 @@
-import Phaser, { Physics } from 'phaser';
+import Phaser from 'phaser';
 import { BootLevel } from './scenes/BootLevel';
 import { SplashLevel } from './scenes/SplashLevel';
 import { MainLevel } from './scenes/MainLevel';
