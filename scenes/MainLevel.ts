@@ -332,6 +332,7 @@ export class MainLevel extends Phaser.Scene {
     this.physics.add.existing(this.gameBorder);
     this.physics.world.setBounds(5, 60, 390, 335);
     this.cameras.main.setBackgroundColor('#B2BF50');
+    this.input.addPointer(1);
 
     // walls
     this.walls.push(new Wall(this, 100, 225, 10, 100));
