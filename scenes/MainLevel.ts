@@ -619,10 +619,12 @@ export class MainLevel extends Phaser.Scene {
     const angleRad = Phaser.Math.DegToRad(tank.angle); // Convert angle to radians
 
     // Calculate the new position based on the angle
-    const moveBackX = MOVE_BACK * Math.cos(angleRad);
-    const moveBackY = MOVE_BACK * Math.sin(angleRad);
+    const moveBackX = Phaser.Math.Between(30, 380);
+    const moveBackY = Phaser.Math.Between(30, 380);
 
-    tank.setVelocity(moveBackX, moveBackY);
+    tank.x = moveBackX;
+    tank.y = moveBackY;
+
     this.time.delayedCall(100, () => {
       tank.setVelocity(0); // Stop the tank after moving
     });

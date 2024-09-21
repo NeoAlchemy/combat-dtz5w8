@@ -27,5 +27,6 @@ const config: Phaser.Types.Core.GameConfig = {
 const game = new Phaser.Game(config);
 
 /* BUGS
-- AI for blue tank when single person
+- Reappearing in walls
+- AI not turning when see tank automatically
 */
