@@ -642,9 +642,9 @@ export class MainLevel extends Phaser.Scene {
 
     // Check if the point (pointX, pointY) is inside the rectangular bounds of the wall
     if (
-      pointX >= wallX + PADDING &&
+      pointX >= wallX - PADDING &&
       pointX <= wallX + wallWidth + PADDING &&
-      pointY >= wallY + PADDING &&
+      pointY >= wallY - PADDING &&
       pointY <= wallY + wallHeight + PADDING
     ) {
       return true; // Point is inside the wall
