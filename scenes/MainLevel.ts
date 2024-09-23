@@ -184,7 +184,18 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
     let frontRay = this._createRay(this.angle);
 
     // If there's an obstacle in front and no cooldown, initiate turning
-    if (frontRay && frontRay.hit && !this.cooldown) {
+    if (this._enemyInFieldOfVision(enemy)) {
+      // Check if obstacle between view
+      let obstacleInRay = this._createRay(
+        Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y)
+      );
+      if (!obstacleInRay) {
+        this._moveTowardEnemy(enemy);
+        this._fire();
+      } else {
+        this._moveForward();
+      }
+    } else if (frontRay && frontRay.hit && !this.cooldown) {
       this._stop(); // Stop the tank
       if (!this._createRay(this.angle - 45)) {
         this._turnLeft(); // Turn left if no obstacle on the left
@@ -205,20 +216,7 @@ class AITank extends Phaser.Physics.Arcade.Sprite {
         this.cooldown = false;
       });
     } else if (!this.cooldown) {
-      if (this._enemyInFieldOfVision(enemy)) {
-        // Check if obstacle between view
-        let rayToEnemy = this._createRay(
-          Phaser.Math.Angle.Between(this.x, this.y, enemy.x, enemy.y)
-        );
-        if (rayToEnemy && rayToEnemy.hit) {
-          this._moveTowardEnemy(enemy);
-          this._fire();
-        } else {
-          this._moveForward();
-        }
-      } else {
-        this._moveForward();
-      }
+      this._moveForward();
     }
   }
 }
@@ -622,17 +620,37 @@ export class MainLevel extends Phaser.Scene {
     const moveBackX = Phaser.Math.Between(30, 380);
     const moveBackY = Phaser.Math.Between(30, 380);
 
-    tank.x = moveBackX;
-    tank.y = moveBackY;
+    tank.setPosition(moveBackX, moveBackY);
 
     this.time.delayedCall(100, () => {
       tank.setVelocity(0); // Stop the tank after moving
     });
 
-    // Collision check - if it collides, move it back to the old position
-    this.physics.world.collide(tank, this.walls, () => {
-      tank.setPosition(oldX, oldY); // Reset the tank's position if there's a collision
-      tank.setVelocity(0); // Stop the velocity after collision
+    let hasOverlap = false;
+
+    this.walls.forEach((wall) => {
+      if (this._isPointInsideWall(moveBackX, moveBackY, wall)) {
+        tank.setPosition(oldX, oldY); // Reset the tank's position if there's a collision
+      }
     });
+  }
+
+  _isPointInsideWall(pointX, pointY, wall) {
+    const wallX = wall.x;
+    const wallY = wall.y;
+    const wallWidth = wall.width;
+    const wallHeight = wall.height;
+
+    // Check if the point (pointX, pointY) is inside the rectangular bounds of the wall
+    if (
+      pointX >= wallX &&
+      pointX <= wallX + wallWidth &&
+      pointY >= wallY &&
+      pointY <= wallY + wallHeight
+    ) {
+      return true; // Point is inside the wall
+    } else {
+      return false; // Point is outside the wall
+    }
   }
 }
