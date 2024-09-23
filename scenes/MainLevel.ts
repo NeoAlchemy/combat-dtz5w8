@@ -626,8 +626,6 @@ export class MainLevel extends Phaser.Scene {
       tank.setVelocity(0); // Stop the tank after moving
     });
 
-    let hasOverlap = false;
-
     this.walls.forEach((wall) => {
       if (this._isPointInsideWall(moveBackX, moveBackY, wall)) {
         tank.setPosition(oldX, oldY); // Reset the tank's position if there's a collision
@@ -636,17 +634,18 @@ export class MainLevel extends Phaser.Scene {
   }
 
   _isPointInsideWall(pointX, pointY, wall) {
-    const wallX = wall.x;
-    const wallY = wall.y;
+    const wallX = wall.x - wall.width / 2; // Adjust to get the top-left corner
+    const wallY = wall.y - wall.height / 2; // Adjust to get the top-left corner
     const wallWidth = wall.width;
     const wallHeight = wall.height;
+    const PADDING = 5;
 
     // Check if the point (pointX, pointY) is inside the rectangular bounds of the wall
     if (
-      pointX >= wallX &&
-      pointX <= wallX + wallWidth &&
-      pointY >= wallY &&
-      pointY <= wallY + wallHeight
+      pointX >= wallX + PADDING &&
+      pointX <= wallX + wallWidth + PADDING &&
+      pointY >= wallY + PADDING &&
+      pointY <= wallY + wallHeight + PADDING
     ) {
       return true; // Point is inside the wall
     } else {
